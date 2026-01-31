@@ -78,8 +78,9 @@ export const streamChatResponse = async ({ messages, onChunk, signal }: StreamOp
             }
 
             if (content) {
-              console.log('💬 Content extracted:', content);
-              fullResponse = content; // Use the full content, not append
+              console.log('💬 Content chunk:', content);
+              // Append the chunk to build up the full response progressively
+              fullResponse += content;
               onChunk(fullResponse);
             }
           } catch (parseError) {

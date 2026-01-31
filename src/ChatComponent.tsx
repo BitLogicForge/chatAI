@@ -2,6 +2,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import SendIcon from '@mui/icons-material/Send';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import StopIcon from '@mui/icons-material/Stop';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import {
   Avatar,
   Box,
@@ -12,6 +14,7 @@ import {
   IconButton,
   Paper,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useMutation } from '@tanstack/react-query';
@@ -27,6 +30,7 @@ export default function ChatComponent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [streamingContent, setStreamingContent] = useState('');
+  const [showStreamPreview, setShowStreamPreview] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -109,11 +113,22 @@ export default function ChatComponent() {
     <Container maxWidth='lg' sx={{ height: '100vh', display: 'flex', flexDirection: 'column', py: 3 }}>
       <Paper elevation={3} sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
-        <Box sx={{ bgcolor: 'primary.main', color: 'white', p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <SmartToyIcon sx={{ fontSize: 32 }} />
-          <Typography variant='h5' component='h1'>
-            Agent Chat
-          </Typography>
+        <Box sx={{ bgcolor: 'primary.main', color: 'white', p: 2, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <SmartToyIcon sx={{ fontSize: 32 }} />
+            <Typography variant='h5' component='h1'>
+              Agent Chat
+            </Typography>
+          </Box>
+          <Tooltip title={showStreamPreview ? 'Hide streaming preview' : 'Show streaming preview'}>
+            <IconButton
+              color='inherit'
+              onClick={() => setShowStreamPreview(!showStreamPreview)}
+              size='small'
+            >
+              {showStreamPreview ? <VisibilityIcon /> : <VisibilityOffIcon />}
+            </IconButton>
+          </Tooltip>
         </Box>
 
         {/* Messages Area */}
@@ -193,8 +208,62 @@ export default function ChatComponent() {
         {streamMutation.isPending && (
           <Box sx={{ px: 2, py: 1, bgcolor: 'action.hover', display: 'flex', alignItems: 'center', gap: 1 }}>
             <CircularProgress size={16} />
-            <Chip label={`Streaming... ${streamingContent.length} chars`} size='small' />
+            <Chip
+              label={streamingContent.length > 0
+                ? `Receiving response... ${streamingContent.length} characters`
+                : 'Waiting for response...'}
+              size='small'
+              color='primary'
+              variant='outlined'
+            />
           </Box>
+        )}
+
+        {/* Streaming Preview Panel */}
+        {showStreamPreview && streamMutation.isPending && streamingContent && (
+          <Paper
+            elevation={0}
+            sx={{
+              mx: 2,
+              mb: 1,
+              p: 2,
+              bgcolor: 'info.light',
+              border: '2px dashed',
+              borderColor: 'info.main',
+              maxHeight: '150px',
+              overflow: 'auto'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <CircularProgress size={14} />
+              <Typography variant='caption' fontWeight='bold' color='info.dark'>
+                🔄 Live Streaming Preview
+              </Typography>
+            </Box>
+            <Typography
+              variant='body2'
+              sx={{
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                fontFamily: 'monospace',
+                fontSize: '0.85rem',
+                color: 'text.primary'
+              }}
+            >
+              {streamingContent}
+              <Box
+                component='span'
+                sx={{
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '14px',
+                  bgcolor: 'info.main',
+                  ml: 0.5,
+                  animation: 'blink 1s infinite'
+                }}
+              />
+            </Typography>
+          </Paper>
         )}
 
         {/* Input Area */}
