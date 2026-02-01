@@ -1,31 +1,19 @@
-import PersonIcon from '@mui/icons-material/Person';
-import SendIcon from '@mui/icons-material/Send';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
-import StopIcon from '@mui/icons-material/Stop';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import {
-  Avatar,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Container,
-  IconButton,
-  Paper,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Box, Paper } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
+import ChatHeader from './components/chat/ChatHeader';
+import ChatInputForm from './components/chat/ChatInputForm';
+import ChatMessage from './components/chat/ChatMessage';
+import EmptyState from './components/chat/EmptyState';
+import StreamingPreviewPanel from './components/chat/StreamingPreviewPanel';
+import StreamingStatusBar from './components/chat/StreamingStatusBar';
 import { useChatStream } from './hooks/useChatStream';
 
 export default function ChatComponent() {
   const [input, setInput] = useState('');
-  const [showStreamPreview, setShowStreamPreview] = useState(true);
+  const [showStreamPreview, setShowStreamPreview] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const { messages, streamingContent, isStreaming, sendMessage, stopStreaming } = useChatStream();
+  const { messages, streamingContent, toolOutputs, isStreaming, sendMessage, stopStreaming } = useChatStream();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -41,207 +29,82 @@ export default function ChatComponent() {
 
     sendMessage(input);
     setInput('');
+    // Auto-open thought process panel when sending message
+    setShowStreamPreview(true);
   };
 
   return (
-    <Container maxWidth='lg' sx={{ height: '100vh', display: 'flex', flexDirection: 'column', py: 3 }}>
-      <Paper elevation={3} sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Header */}
-        <Box
-          sx={{
-            bgcolor: 'primary.main',
-            color: 'white',
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            justifyContent: 'space-between',
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <SmartToyIcon sx={{ fontSize: 32 }} />
-            <Typography variant='h5' component='h1'>
-              Agent Chat
-            </Typography>
-          </Box>
-          <Tooltip title={showStreamPreview ? 'Hide streaming preview' : 'Show streaming preview'}>
-            <IconButton color='inherit' onClick={() => setShowStreamPreview(!showStreamPreview)} size='small'>
-              {showStreamPreview ? <VisibilityIcon /> : <VisibilityOffIcon />}
-            </IconButton>
-          </Tooltip>
-        </Box>
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'stretch',
+          transition: 'all 0.3s ease',
+          width: showStreamPreview && (isStreaming || toolOutputs.length > 0) ? 'calc(100% - 400px)' : '100%',
+          py: 3,
+          px: { xs: 2, sm: 3 },
+        }}
+      >
+        <Box sx={{ width: '100%', maxWidth: '1200px' }}>
+          <Paper elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <ChatHeader
+              showStreamPreview={showStreamPreview}
+              onToggleStreamPreview={() => setShowStreamPreview(!showStreamPreview)}
+              hasStreamingContent={isStreaming || toolOutputs.length > 0}
+            />
 
-        {/* Messages Area */}
-        <Box
-          sx={{
-            flex: 1,
-            overflow: 'auto',
-            p: 2,
-            bgcolor: 'background.default',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-          }}
-        >
-          {messages.length === 0 ? (
+            {/* Messages Area */}
             <Box
               sx={{
+                flex: 1,
+                overflow: 'auto',
+                p: 2,
+                bgcolor: 'background.default',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
                 gap: 2,
               }}
             >
-              <SmartToyIcon sx={{ fontSize: 64, color: 'text.secondary' }} />
-              <Typography variant='h6' color='text.secondary'>
-                Start a conversation about your banking needs
-              </Typography>
+              {messages.length === 0 ? (
+                <EmptyState />
+              ) : (
+                messages.map((msg, idx) => (
+                  <ChatMessage
+                    key={idx}
+                    role={msg.role}
+                    content={msg.content}
+                    isLastMessage={idx === messages.length - 1}
+                    isStreaming={isStreaming}
+                  />
+                ))
+              )}
+              <div ref={messagesEndRef} />
             </Box>
-          ) : (
-            messages.map((msg, idx) => (
-              <Box
-                key={idx}
-                sx={{
-                  display: 'flex',
-                  gap: 2,
-                  alignItems: 'flex-start',
-                  flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                }}
-              >
-                <Avatar
-                  sx={{
-                    bgcolor: msg.role === 'user' ? 'primary.main' : 'secondary.main',
-                  }}
-                >
-                  {msg.role === 'user' ? <PersonIcon /> : <SmartToyIcon />}
-                </Avatar>
-                <Paper
-                  elevation={1}
-                  sx={{
-                    p: 2,
-                    maxWidth: '70%',
-                    bgcolor: msg.role === 'user' ? 'primary.light' : 'white',
-                    color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
-                  }}
-                >
-                  <Typography variant='body1' sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {msg.content}
-                    {isStreaming && idx === messages.length - 1 && !msg.content && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CircularProgress size={20} />
-                        <Typography variant='body2' color='text.secondary'>
-                          Thinking...
-                        </Typography>
-                      </Box>
-                    )}
-                  </Typography>
-                </Paper>
-              </Box>
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </Box>
 
-        {/* Status Bar */}
-        {isStreaming && (
-          <Box sx={{ px: 2, py: 1, bgcolor: 'action.hover', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CircularProgress size={16} />
-            <Chip
-              label={
-                streamingContent.length > 0
-                  ? `Receiving response... ${streamingContent.length} characters`
-                  : 'Waiting for response...'
-              }
-              size='small'
-              color='primary'
-              variant='outlined'
+            {isStreaming && <StreamingStatusBar streamingContentLength={streamingContent.length} />}
+
+            <ChatInputForm
+              input={input}
+              isStreaming={isStreaming}
+              onInputChange={setInput}
+              onSubmit={handleSubmit}
+              onStop={stopStreaming}
             />
-          </Box>
-        )}
-
-        {/* Streaming Preview Panel */}
-        {showStreamPreview && isStreaming && streamingContent && (
-          <Paper
-            elevation={0}
-            sx={{
-              mx: 2,
-              mb: 1,
-              p: 2,
-              bgcolor: 'info.light',
-              border: '2px dashed',
-              borderColor: 'info.main',
-              maxHeight: '150px',
-              overflow: 'auto',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <CircularProgress size={14} />
-              <Typography variant='caption' fontWeight='bold' color='info.dark'>
-                🔄 Live Streaming Preview
-              </Typography>
-            </Box>
-            <Typography
-              variant='body2'
-              sx={{
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                fontFamily: 'monospace',
-                fontSize: '0.85rem',
-                color: 'text.primary',
-              }}
-            >
-              {streamingContent}
-              <Box
-                component='span'
-                sx={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '14px',
-                  bgcolor: 'info.main',
-                  ml: 0.5,
-                  animation: 'blink 1s infinite',
-                }}
-              />
-            </Typography>
           </Paper>
-        )}
-
-        {/* Input Area */}
-        <Box
-          component='form'
-          onSubmit={handleSubmit}
-          sx={{
-            p: 2,
-            borderTop: 1,
-            borderColor: 'divider',
-            display: 'flex',
-            gap: 1,
-            bgcolor: 'background.paper',
-          }}
-        >
-          <TextField
-            fullWidth
-            variant='outlined'
-            placeholder='Ask ...'
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            disabled={isStreaming}
-            size='small'
-            autoComplete='off'
-          />
-          {isStreaming ? (
-            <IconButton color='error' onClick={stopStreaming} aria-label='stop'>
-              <StopIcon />
-            </IconButton>
-          ) : (
-            <Button type='submit' variant='contained' endIcon={<SendIcon />} disabled={!input.trim()}>
-              Send
-            </Button>
-          )}
         </Box>
-      </Paper>
-    </Container>
+      </Box>
+
+      {(isStreaming || toolOutputs.length > 0) && (
+        <StreamingPreviewPanel
+          streamingContent={streamingContent}
+          toolOutputs={toolOutputs}
+          isVisible={showStreamPreview}
+          isStreaming={isStreaming}
+          onClose={() => setShowStreamPreview(false)}
+        />
+      )}
+    </Box>
   );
 }

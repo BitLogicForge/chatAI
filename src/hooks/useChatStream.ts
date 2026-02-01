@@ -7,14 +7,26 @@ interface Message {
   content: string;
 }
 
+interface ToolMessage {
+  type: 'tool';
+  name: string;
+  content: string;
+  tool_call_id: string;
+  status?: string;
+}
+
 export const useChatStream = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingContent, setStreamingContent] = useState('');
+  const [toolOutputs, setToolOutputs] = useState<ToolMessage[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const mutation = useMutation({
     mutationFn: async (query: string) => {
       abortControllerRef.current = new AbortController();
+
+      // Clear previous tool outputs when starting new request
+      setToolOutputs([]);
 
       // Add user message
       const userMsg: Message = { role: 'user', content: query };
@@ -40,11 +52,17 @@ export const useChatStream = () => {
               return updated;
             });
           },
+          onToolOutput: toolMessages => {
+            console.log('🔧 Received tool outputs:', toolMessages);
+            // Append new tool outputs to existing ones
+            setToolOutputs(prev => [...prev, ...toolMessages]);
+          },
         });
 
         return fullResponse;
       } finally {
         setStreamingContent('');
+        // Don't clear toolOutputs here - keep them visible
       }
     },
     onError: () => {
@@ -63,16 +81,19 @@ export const useChatStream = () => {
     abortControllerRef.current?.abort();
     mutation.reset();
     setStreamingContent('');
+    // Keep tool outputs visible even after stopping
   };
 
   const clearChat = () => {
     setMessages([]);
     setStreamingContent('');
+    setToolOutputs([]);
   };
 
   return {
     messages,
     streamingContent,
+    toolOutputs,
     isStreaming: mutation.isPending,
     sendMessage: mutation.mutate,
     stopStreaming,

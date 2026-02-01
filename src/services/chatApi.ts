@@ -3,13 +3,27 @@ interface Message {
   content: string;
 }
 
+interface ToolMessage {
+  type: 'tool';
+  name: string;
+  content: string;
+  tool_call_id: string;
+  status?: string;
+}
+
 interface StreamOptions {
   messages: Message[];
   onChunk: (content: string) => void;
+  onToolOutput?: (toolMessages: ToolMessage[]) => void;
   signal?: AbortSignal;
 }
 
-export const streamChatResponse = async ({ messages, onChunk, signal }: StreamOptions): Promise<string> => {
+export const streamChatResponse = async ({
+  messages,
+  onChunk,
+  onToolOutput,
+  signal,
+}: StreamOptions): Promise<string> => {
   let fullResponse = '';
 
   try {
@@ -66,6 +80,12 @@ export const streamChatResponse = async ({ messages, onChunk, signal }: StreamOp
           try {
             const data = JSON.parse(line.slice(6));
             console.log('📨 Parsed data:', data);
+
+            // Check for tool outputs
+            if (data?.tools?.messages && onToolOutput) {
+              console.log('🔧 Tool outputs detected:', data.tools.messages);
+              onToolOutput(data.tools.messages);
+            }
 
             // Extract content from nested structure: model.messages[0].content
             let content = '';
