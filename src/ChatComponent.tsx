@@ -17,22 +17,15 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { streamChatResponse } from './services/chatApi';
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
+import { useChatStream } from './hooks/useChatStream';
 
 export default function ChatComponent() {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [streamingContent, setStreamingContent] = useState('');
   const [showStreamPreview, setShowStreamPreview] = useState(true);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const { messages, streamingContent, isStreaming, sendMessage, stopStreaming } = useChatStream();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,78 +35,29 @@ export default function ChatComponent() {
     scrollToBottom();
   }, [messages, streamingContent]);
 
-  // React Query mutation for streaming
-  const streamMutation = useMutation({
-    mutationFn: async (query: string) => {
-      abortControllerRef.current = new AbortController();
-
-      // Add user message
-      const userMsg: Message = { role: 'user', content: query };
-      const updatedMessages = [...messages, userMsg];
-      setMessages(updatedMessages);
-
-      // Add placeholder for assistant
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-
-      try {
-        const fullResponse = await streamChatResponse({
-          messages: updatedMessages,
-          signal: abortControllerRef.current.signal,
-          onChunk: content => {
-            setStreamingContent(content);
-            // Update last message in real-time
-            setMessages(prev => {
-              const updated = [...prev];
-              updated[updated.length - 1] = {
-                role: 'assistant',
-                content,
-              };
-              return updated;
-            });
-          },
-        });
-
-        return fullResponse;
-      } catch (error) {
-        console.error('❌ Stream error:', error);
-        throw error;
-      } finally {
-        setStreamingContent('');
-      }
-    },
-    onError: error => {
-      console.error('Streaming error:', error);
-      setMessages(prev => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          role: 'assistant',
-          content: 'Sorry, an error occurred.',
-        };
-        return updated;
-      });
-    },
-  });
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || streamMutation.isPending) return;
+    if (!input.trim() || isStreaming) return;
 
-    streamMutation.mutate(input);
+    sendMessage(input);
     setInput('');
-  };
-
-  const stopStreaming = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    streamMutation.reset();
   };
 
   return (
     <Container maxWidth='lg' sx={{ height: '100vh', display: 'flex', flexDirection: 'column', py: 3 }}>
       <Paper elevation={3} sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
-        <Box sx={{ bgcolor: 'primary.main', color: 'white', p: 2, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
+        <Box
+          sx={{
+            bgcolor: 'primary.main',
+            color: 'white',
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            justifyContent: 'space-between',
+          }}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SmartToyIcon sx={{ fontSize: 32 }} />
             <Typography variant='h5' component='h1'>
@@ -121,11 +65,7 @@ export default function ChatComponent() {
             </Typography>
           </Box>
           <Tooltip title={showStreamPreview ? 'Hide streaming preview' : 'Show streaming preview'}>
-            <IconButton
-              color='inherit'
-              onClick={() => setShowStreamPreview(!showStreamPreview)}
-              size='small'
-            >
+            <IconButton color='inherit' onClick={() => setShowStreamPreview(!showStreamPreview)} size='small'>
               {showStreamPreview ? <VisibilityIcon /> : <VisibilityOffIcon />}
             </IconButton>
           </Tooltip>
@@ -188,7 +128,7 @@ export default function ChatComponent() {
                 >
                   <Typography variant='body1' sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {msg.content}
-                    {streamMutation.isPending && idx === messages.length - 1 && !msg.content && (
+                    {isStreaming && idx === messages.length - 1 && !msg.content && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <CircularProgress size={20} />
                         <Typography variant='body2' color='text.secondary'>
@@ -205,13 +145,15 @@ export default function ChatComponent() {
         </Box>
 
         {/* Status Bar */}
-        {streamMutation.isPending && (
+        {isStreaming && (
           <Box sx={{ px: 2, py: 1, bgcolor: 'action.hover', display: 'flex', alignItems: 'center', gap: 1 }}>
             <CircularProgress size={16} />
             <Chip
-              label={streamingContent.length > 0
-                ? `Receiving response... ${streamingContent.length} characters`
-                : 'Waiting for response...'}
+              label={
+                streamingContent.length > 0
+                  ? `Receiving response... ${streamingContent.length} characters`
+                  : 'Waiting for response...'
+              }
               size='small'
               color='primary'
               variant='outlined'
@@ -220,7 +162,7 @@ export default function ChatComponent() {
         )}
 
         {/* Streaming Preview Panel */}
-        {showStreamPreview && streamMutation.isPending && streamingContent && (
+        {showStreamPreview && isStreaming && streamingContent && (
           <Paper
             elevation={0}
             sx={{
@@ -231,7 +173,7 @@ export default function ChatComponent() {
               border: '2px dashed',
               borderColor: 'info.main',
               maxHeight: '150px',
-              overflow: 'auto'
+              overflow: 'auto',
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -247,7 +189,7 @@ export default function ChatComponent() {
                 wordBreak: 'break-word',
                 fontFamily: 'monospace',
                 fontSize: '0.85rem',
-                color: 'text.primary'
+                color: 'text.primary',
               }}
             >
               {streamingContent}
@@ -259,7 +201,7 @@ export default function ChatComponent() {
                   height: '14px',
                   bgcolor: 'info.main',
                   ml: 0.5,
-                  animation: 'blink 1s infinite'
+                  animation: 'blink 1s infinite',
                 }}
               />
             </Typography>
@@ -285,11 +227,11 @@ export default function ChatComponent() {
             placeholder='Ask ...'
             value={input}
             onChange={e => setInput(e.target.value)}
-            disabled={streamMutation.isPending}
+            disabled={isStreaming}
             size='small'
             autoComplete='off'
           />
-          {streamMutation.isPending ? (
+          {isStreaming ? (
             <IconButton color='error' onClick={stopStreaming} aria-label='stop'>
               <StopIcon />
             </IconButton>
