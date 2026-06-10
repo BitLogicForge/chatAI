@@ -53,7 +53,7 @@ export default function StreamingPreviewPanel({
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PsychologyIcon />
-          <Typography variant='h6' fontWeight='bold'>
+          <Typography variant='h6' sx={{ fontWeight: 'bold' }}>
             Thought Process
           </Typography>
         </Box>
@@ -66,7 +66,7 @@ export default function StreamingPreviewPanel({
         {/* Tool Outputs Section */}
         {toolOutputs.length > 0 && (
           <>
-            <Typography variant='subtitle2' fontWeight='bold' color='primary.main' sx={{ mb: 1.5 }}>
+            <Typography variant='subtitle2' sx={{ mb: 1.5, fontWeight: 'bold', color: 'primary.main' }}>
               🔧 Tool Outputs
             </Typography>
             {toolOutputs.map((tool, idx) => (
@@ -123,7 +123,7 @@ export default function StreamingPreviewPanel({
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <CircularProgress size={16} sx={{ color: 'info.dark' }} />
-              <Typography variant='subtitle2' fontWeight='bold' color='info.dark'>
+              <Typography variant='subtitle2' sx={{ fontWeight: 'bold', color: 'info.dark' }}>
                 🧠 AI is thinking...
               </Typography>
             </Box>
@@ -163,16 +163,16 @@ export default function StreamingPreviewPanel({
 
         <Box sx={{ mt: 2, p: 1.5, bgcolor: 'grey.100', borderRadius: 1 }}>
           {isStreaming && (
-            <Typography variant='caption' color='text.secondary' display='block'>
+            <Typography variant='caption' sx={{ display: 'block', color: 'text.secondary' }}>
               💡 Response: {streamingContent.length} chars
             </Typography>
           )}
           {toolOutputs.length > 0 && (
-            <Typography variant='caption' color='text.secondary' display='block'>
+            <Typography variant='caption' sx={{ display: 'block', color: 'text.secondary' }}>
               🔧 Tools used: {toolOutputs.length}
             </Typography>
           )}
-          <Typography variant='caption' color='text.secondary' display='block'>
+          <Typography variant='caption' sx={{ display: 'block', color: 'text.secondary' }}>
             {isStreaming ? '⚡ Live streaming' : '✅ Process complete'}
           </Typography>
         </Box>

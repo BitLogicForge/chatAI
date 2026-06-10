@@ -6,8 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx}\"",
+    "format:check": "prettier --check .",
+    "type-check": "tsc -b --noEmit",
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
+    "update": "npm-check-updates -u",
+    "update:minor": "npm-check-updates -u --target minor",
+    "update:noes": "npx npm-check-updates -u --reject @eslint/js --reject eslint",
+    "clean:win": "rd /s /q dist && rd /s /q node_modules",
+    "clean:linux": "rm -rf dist node_modules",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
