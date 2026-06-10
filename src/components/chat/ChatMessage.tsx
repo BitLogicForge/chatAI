@@ -10,43 +10,69 @@ interface ChatMessageProps {
 }
 
 export default function ChatMessage({ role, content, isLastMessage, isStreaming }: ChatMessageProps) {
+  const isUser = role === 'user';
+
   return (
     <Box
       sx={{
         display: 'flex',
-        gap: 2,
+        gap: 1.5,
         alignItems: 'flex-start',
-        flexDirection: role === 'user' ? 'row-reverse' : 'row',
+        flexDirection: isUser ? 'row-reverse' : 'row',
       }}
     >
       <Avatar
         sx={{
-          bgcolor: role === 'user' ? 'primary.main' : 'secondary.main',
+          width: 42,
+          height: 42,
+          bgcolor: isUser ? 'primary.main' : 'secondary.main',
+          color: 'common.white',
+          boxShadow: isUser ? '0 10px 24px rgba(79, 70, 229, 0.24)' : '0 10px 24px rgba(15, 23, 42, 0.16)',
         }}
       >
-        {role === 'user' ? <PersonIcon /> : <SmartToyIcon />}
+        {isUser ? <PersonIcon fontSize='small' /> : <SmartToyIcon fontSize='small' />}
       </Avatar>
-      <Paper
-        elevation={1}
+
+      <Box
         sx={{
-          p: 2,
-          maxWidth: '70%',
-          bgcolor: role === 'user' ? 'primary.light' : 'white',
-          color: role === 'user' ? 'primary.contrastText' : 'text.primary',
+          maxWidth: { xs: '86%', md: '76%' },
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: isUser ? 'flex-end' : 'flex-start',
+          gap: 0.75,
         }}
       >
-        <Typography variant='body1' sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {content}
-          {isStreaming && isLastMessage && !content && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={20} />
+        <Typography variant='caption' sx={{ px: 0.5, color: 'text.secondary', fontWeight: 700, letterSpacing: '0.04em' }}>
+          {isUser ? 'YOU' : 'ASSISTANT'}
+        </Typography>
+
+        <Paper
+          elevation={0}
+          sx={{
+            px: 2,
+            py: 1.5,
+            borderRadius: isUser ? '24px 24px 8px 24px' : '24px 24px 24px 8px',
+            bgcolor: isUser ? 'primary.main' : 'background.paper',
+            color: isUser ? 'common.white' : 'text.primary',
+            border: isUser ? 'none' : '1px solid',
+            borderColor: 'divider',
+            boxShadow: isUser ? '0 18px 32px rgba(79, 70, 229, 0.18)' : '0 16px 28px rgba(15, 23, 42, 0.06)',
+          }}
+        >
+          {isStreaming && isLastMessage && !content ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 140 }}>
+              <CircularProgress size={18} sx={{ color: 'primary.main' }} />
               <Typography variant='body2' color='text.secondary'>
                 Thinking...
               </Typography>
             </Box>
+          ) : (
+            <Typography variant='body1' sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.65 }}>
+              {content}
+            </Typography>
           )}
-        </Typography>
-      </Paper>
+        </Paper>
+      </Box>
     </Box>
   );
 }

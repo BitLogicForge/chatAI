@@ -1,4 +1,4 @@
-import { Box, Paper } from '@mui/material';
+import { Box, Paper, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import ChatHeader from './components/chat/ChatHeader';
 import ChatInputForm from './components/chat/ChatInputForm';
@@ -12,8 +12,12 @@ export default function ChatComponent() {
   const [input, setInput] = useState('');
   const [showStreamPreview, setShowStreamPreview] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+  const previewWidth = 420;
 
   const { messages, streamingContent, toolOutputs, isStreaming, sendMessage, stopStreaming } = useChatStream();
+  const hasStreamingContent = isStreaming || toolOutputs.length > 0;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -34,37 +38,59 @@ export default function ChatComponent() {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        minHeight: '100vh',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
       <Box
         sx={{
           flex: 1,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'stretch',
-          transition: 'all 0.3s ease',
-          width: showStreamPreview && (isStreaming || toolOutputs.length > 0) ? 'calc(100% - 400px)' : '100%',
-          py: 3,
-          px: { xs: 2, sm: 3 },
+          transition: 'width 0.35s ease, padding 0.35s ease',
+          width: isDesktop && showStreamPreview && hasStreamingContent ? `calc(100% - ${previewWidth}px)` : '100%',
+          py: { xs: 2, md: 3 },
+          px: { xs: 1.5, sm: 2.5, lg: 3.5 },
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: '1200px' }}>
-          <Paper elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <Box sx={{ width: '100%', maxWidth: hasStreamingContent ? '1360px' : '1160px' }}>
+          <Paper
+            elevation={4}
+            sx={{
+              height: '100%',
+              minHeight: { xs: 'calc(100vh - 16px)', md: 'calc(100vh - 48px)' },
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: { xs: 2, md: 3 },
+              backdropFilter: 'blur(18px)',
+              backgroundColor: 'rgba(255, 255, 255, 0.82)',
+              boxShadow: '0 24px 80px rgba(79, 70, 229, 0.12)',
+            }}
+          >
             <ChatHeader
               showStreamPreview={showStreamPreview}
               onToggleStreamPreview={() => setShowStreamPreview(!showStreamPreview)}
-              hasStreamingContent={isStreaming || toolOutputs.length > 0}
+              hasStreamingContent={hasStreamingContent}
             />
 
-            {/* Messages Area */}
             <Box
               sx={{
                 flex: 1,
                 overflow: 'auto',
-                p: 2,
-                bgcolor: 'background.default',
+                px: { xs: 1.5, md: 3 },
+                py: { xs: 2, md: 3 },
+                bgcolor: 'transparent',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 2,
+                gap: 2.5,
+                background:
+                  'linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(238, 242, 255, 0.58) 100%)',
               }}
             >
               {messages.length === 0 ? (
@@ -96,12 +122,13 @@ export default function ChatComponent() {
         </Box>
       </Box>
 
-      {(isStreaming || toolOutputs.length > 0) && (
+      {hasStreamingContent && (
         <StreamingPreviewPanel
           streamingContent={streamingContent}
           toolOutputs={toolOutputs}
           isVisible={showStreamPreview}
           isStreaming={isStreaming}
+          isDesktop={isDesktop}
           onClose={() => setShowStreamPreview(false)}
         />
       )}
